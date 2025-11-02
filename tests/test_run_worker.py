@@ -5,7 +5,7 @@ from temporalio import activity
 from temporalio.worker import Worker
 from temporalio.testing import WorkflowEnvironment
 
-from activities import say_hello
+from activities import say_hello, say_bye
 from workflows import SayHello
 
 
@@ -17,19 +17,27 @@ async def test_execute_workflow():
             env.client,
             task_queue=task_queue_name,
             workflows=[SayHello],
-            activities=[say_hello],
+            activities=[say_hello, say_bye],
         ):
-            assert "Hello, World!" == await env.client.execute_workflow(
-                SayHello.run,
-                "World",
-                id=str(uuid.uuid4()),
-                task_queue=task_queue_name,
+            assert (
+                "Hello, World!\nBye bye, World!"
+                == await env.client.execute_workflow(
+                    SayHello.run,
+                    "World",
+                    id=str(uuid.uuid4()),
+                    task_queue=task_queue_name,
+                )
             )
 
 
 @activity.defn(name="say_hello")
 async def say_hello_mocked(name: str) -> str:
     return f"Hello, {name} from mocked activity!"
+
+
+@activity.defn(name="say_bye")
+async def say_bye_mocked(name: str) -> str:
+    return f"Bye bye, {name} from mocked activity!"
 
 
 @pytest.mark.asyncio
@@ -40,10 +48,10 @@ async def test_mock_activity():
             env.client,
             task_queue=task_queue_name,
             workflows=[SayHello],
-            activities=[say_hello_mocked],
+            activities=[say_hello_mocked, say_bye_mocked],
         ):
             assert (
-                "Hello, World from mocked activity!"
+                "Hello, World from mocked activity!\nBye bye, World from mocked activity!"
                 == await env.client.execute_workflow(
                     SayHello.run,
                     "World",
